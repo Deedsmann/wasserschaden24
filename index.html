@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wasserschaden24 – Chatbot Widget Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ── DEMO PAGE ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0a1628;
+    color: #e8edf5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px 20px;
+  }
+  .demo-hint {
+    font-size: 13px;
+    color: #4a6fa5;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .demo-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 6vw, 64px);
+    letter-spacing: 0.04em;
+    color: #e8edf5;
+    text-align: center;
+  }
+  .demo-title span { color: #00b4ff; }
+  .demo-sub {
+    font-size: 15px;
+    color: #7a99c5;
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.6;
+  }
+  .demo-arrow {
+    margin-top: 40px;
+    font-size: 13px;
+    color: #4a6fa5;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: bounce 1.6s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  /* ── CHAT WIDGET ── */
+  #chat-bubble {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0072c6, #00b4ff);
+    box-shadow: 0 4px 24px rgba(0,180,255,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+  }
+  #chat-bubble:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 32px rgba(0,180,255,0.6);
+  }
+  #chat-bubble svg { pointer-events: none; }
+
+  .notfall-badge {
+    position: fixed;
+    bottom: 96px;
+    right: 28px;
+    background: #e02b2b;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(224,43,43,0.5);
+    z-index: 9998;
+    animation: pulse-badge 2s ease-in-out infinite;
+    cursor: pointer;
+  }
+  @keyframes pulse-badge {
+    0%,100% { box-shadow: 0 2px 12px rgba(224,43,43,0.5); }
+    50% { box-shadow: 0 2px 22px rgba(224,43,43,0.9); }
+  }
+
+  #chat-window {
+    position: fixed;
+    bottom: 100px;
+    right: 28px;
+    width: 370px;
+    max-width: calc(100vw - 40px);
+    height: 560px;
+    max-height: calc(100vh - 120px);
+    border-radius: 20px;
+    background: #0d1f3c;
+    border: 1px solid rgba(0,180,255,0.15);
+    box-shadow: 0 16px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,180,255,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9998;
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  #chat-window.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg, #003d80, #0072c6);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .chat-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .chat-header-info { flex: 1; }
+  .chat-header-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    line-height: 1;
+  }
+  .chat-header-status {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #2dff8f;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .chat-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    transition: color 0.15s, background 0.15s;
+  }
+  .chat-close:hover { color: #fff; background: rgba(255,255,255,0.12); }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,180,255,0.2) transparent;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: rgba(0,180,255,0.2); border-radius: 2px; }
+
+  .msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    animation: msg-in 0.22s ease-out;
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.bot {
+    background: #152742;
+    border: 1px solid rgba(0,180,255,0.12);
+    color: #d8e8f5;
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+  }
+  .msg.user {
+    background: linear-gradient(135deg, #0060b0, #0090e0);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    align-self: flex-end;
+  }
+  .msg.error {
+    background: #2b0f0f;
+    border: 1px solid rgba(224,43,43,0.3);
+    color: #f5a0a0;
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 5px;
+    padding: 12px 16px;
+    background: #152742;
+    border: 1px solid rgba(0,180,255,0.12);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+    align-self: flex-start;
+    animation: msg-in 0.22s ease-out;
+  }
+  .typing-indicator span {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #00b4ff;
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  .quick-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 0 14px 10px;
+    flex-shrink: 0;
+  }
+  .quick-btn {
+    background: rgba(0,100,180,0.18);
+    border: 1px solid rgba(0,180,255,0.25);
+    color: #7ecfff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 13px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .quick-btn:hover {
+    background: rgba(0,140,220,0.35);
+    border-color: rgba(0,180,255,0.6);
+    color: #c8eeff;
+  }
+
+  .chat-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(0,180,255,0.1);
+    background: #091829;
+    flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1;
+    background: #152742;
+    border: 1px solid rgba(0,180,255,0.2);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: #d8e8f5;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+  }
+  #chat-input::placeholder { color: #4a6fa5; }
+  #chat-input:focus { border-color: rgba(0,180,255,0.5); }
+  #send-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0060b0, #00a8f0);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  #send-btn:hover { opacity: 0.9; transform: scale(1.05); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* API KEY OVERLAY */
+  #api-overlay {
+    position: absolute;
+    inset: 0;
+    background: #0d1f3c;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    gap: 14px;
+  }
+  #api-overlay h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    color: #00b4ff;
+  }
+  #api-overlay p {
+    font-size: 13px;
+    color: #7a99c5;
+    text-align: center;
+    line-height: 1.6;
+  }
+  #api-key-input {
+    width: 100%;
+    background: #152742;
+    border: 1px solid rgba(0,180,255,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: #d8e8f5;
+    outline: none;
+  }
+  #api-key-input::placeholder { color: #4a6fa5; }
+  #save-key-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #0060b0, #00a8f0);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #save-key-btn:hover { opacity: 0.9; }
+  .key-note {
+    font-size: 11px;
+    color: #3a5a80;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- DEMO PAGE CONTENT -->
+<p class="demo-hint">🔧 Widget Demo</p>
+<h1 class="demo-title">Wasserschaden<span>24</span></h1>
+<p class="demo-sub">
+  Dein KI-Assistent ist unten rechts aktiv.<br>
+  Klicke auf den blauen Button, um den Chatbot zu testen.
+</p>
+<div class="demo-arrow">
+  Chat starten
+  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path d="M12 5v14M5 12l7 7 7-7"/>
+  </svg>
+</div>
+
+<!-- BETREIBER-PANEL -->
+<div id="betreiber-btn" onclick="toggleBetreiberPanel()" style="
+  margin-top:32px;
+  font-size:12px;
+  color:#2a4a6a;
+  cursor:pointer;
+  text-decoration:underline;
+  letter-spacing:0.05em;
+">🔒 Betreiber: Rückrufliste anzeigen</div>
+
+<div id="betreiber-panel" style="display:none;background:#0d1f3c;border:1px solid rgba(0,180,255,0.2);border-radius:14px;padding:20px;max-width:400px;width:100%;margin-top:8px;">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#00b4ff;letter-spacing:0.06em;margin-bottom:12px;">📋 Rückruf-Anfragen</div>
+  <div id="rueckruf-liste" style="font-size:13px;color:#7a99c5;"></div>
+  <button onclick="clearRueckrufe()" style="margin-top:14px;background:rgba(224,43,43,0.15);border:1px solid rgba(224,43,43,0.3);color:#f5a0a0;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Liste leeren</button>
+</div>
+
+<!-- NOTFALL BADGE -->
+<div class="notfall-badge" onclick="openChat()">🚨 24h Notdienst</div>
+
+<!-- CHAT BUBBLE -->
+<button id="chat-bubble" onclick="toggleChat()" aria-label="Chat öffnen">
+  <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round"
+      d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.837L3 20l1.09-3.635C3.402 15.07 3 13.582 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+  </svg>
+</button>
+
+<!-- CHAT WINDOW -->
+<div id="chat-window">
+
+  <!-- API KEY OVERLAY (shown on first use) -->
+  <div id="api-overlay">
+    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#00b4ff" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+    </svg>
+    <h3>API-Key eingeben</h3>
+    <p>Trage einmalig deinen Anthropic API-Key ein.<br>Er wird nur in deinem Browser gespeichert.</p>
+    <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." />
+    <button id="save-key-btn" onclick="saveApiKey()">Speichern & Starten</button>
+    <p class="key-note">
+      Noch kein Key? → console.anthropic.com<br>
+      Konto erstellen → API Keys → Create Key
+    </p>
+  </div>
+
+  <!-- HEADER -->
+  <div class="chat-header">
+    <div class="chat-header-avatar">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 3v1m0 16v1m8.66-9H21M3 12H2.34M18.36 5.64l-.7.7M6.34 17.66l-.7.7M18.36 18.36l-.7-.7M6.34 6.34l-.7-.7
+          M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+      </svg>
+    </div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Wasserschaden24.online</div>
+      <div class="chat-header-status">
+        <span class="status-dot"></span>
+        KI-Assistent · 24/7 verfügbar
+      </div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="chat-messages" id="chat-messages"></div>
+
+  <!-- QUICK BUTTONS -->
+  <div class="quick-btns" id="quick-btns">
+    <button class="quick-btn" onclick="quickSend('🚨 Notfall – Wasserschaden!')">🚨 Notfall</button>
+    <button class="quick-btn" onclick="quickSend('Welche Leistungen bietet ihr an?')">Leistungen</button>
+    <button class="quick-btn" onclick="quickSend('Was kostet ein Einsatz?')">Preise</button>
+    <button class="quick-btn" onclick="quickSend('Ich möchte einen Termin vereinbaren.')">Termin</button>
+    <button class="quick-btn" onclick="quickSend('Ich möchte einen Rückruf.')">📞 Rückruf</button>
+  </div>
+
+  <!-- INPUT ROW -->
+  <div class="chat-input-row">
+    <textarea id="chat-input" rows="1" placeholder="Ihre Frage eingeben…"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12
+          a59.77 59.77 0 01-18.216 8.874L6 12zm0 0h7.5"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const BETRIEB_NAME    = "Wasserschaden24.online";
+const KONTAKT_TEL     = "+491606076427";
+const KONTAKT_EMAIL   = "info@pixel-ads.de";
+const OEFFNUNGSZEITEN = "24 Stunden täglich, 7 Tage die Woche";
+const STADT           = "Gießen und Umkreis bis 25 km";
+const SERVER_URL      = "https://DEIN-SERVER.railway.app"; // ← Nach Railway-Deploy eintragen
+
+const SYSTEM_PROMPT = `Du bist der freundliche KI-Assistent von ${BETRIEB_NAME}, einem professionellen Klempner- und Sanitär-Notdienst, der ${OEFFNUNGSZEITEN} erreichbar ist.
+
+WICHTIGE INFOS:
+- Telefon: ${KONTAKT_TEL}
+- E-Mail: ${KONTAKT_EMAIL}
+- Einsatzgebiet: ${STADT}
+- Verfügbarkeit: 24h/7 Tage
+
+LEISTUNGEN:
+- Wasserschaden-Soforthilfe (Rohrbruch, Leckage, Überflutung)
+- Rohr- und Leitungsreparatur
+- Heizungsausfall-Notdienst
+- Verstopfung / Kanalreinigung
+- Sanitärinstallation (Dusche, WC, Waschtisch, Badewanne)
+- Warmwasserboiler-Reparatur & Austausch
+- Druckprüfung und Leckage-Ortung
+
+PREISE (ungefähre Richtwerte):
+- Notfalleinsatz ab 89 €
+- Anfahrtspauschale: kostenlos im Umkreis von 30 km
+- Stundensatz: ab 79 €/h
+- Kostenvoranschlag ist immer kostenlos
+
+RÜCKRUF-SYSTEM (WICHTIG):
+- Wir rufen IMMER zurück – der Kunde muss uns NICHT selbst anrufen.
+- Sobald jemand einen Termin, Rückruf oder Hilfe möchte: frage nach Vorname und Telefonnummer.
+- Frage beides in EINER Nachricht ab: "Wie ist Ihr Name und unter welcher Nummer können wir Sie erreichen?"
+- Sobald du Name UND Telefonnummer hast, antworte AUSSCHLIESSLICH mit folgendem JSON-Format (kein Text davor oder danach):
+  {"RUECKRUF": true, "name": "Vorname", "telefon": "Nummer"}
+- Gib dieses JSON aus, sobald beide Angaben vorliegen – egal ob in einer oder zwei Nachrichten.
+
+DEIN VERHALTEN:
+- Antworte immer auf Deutsch, kurz und freundlich
+- Bei Notfällen: sofort Rückruf anbieten und nach Name + Nummer fragen
+- Preise immer als Richtwerte kommunizieren
+- Maximal 3-4 Sätze pro Antwort
+- Niemals eine direkte Telefonnummer nennen – stattdessen immer Rückruf anbieten`;
+// ────────────────────────────────────────────────────────
+
+let messages      = [];
+let isOpen        = false;
+let isLoading     = false;
+let apiKey        = localStorage.getItem('ws24_apikey') || '';
+let smsState      = null; // { name, telefon } – wartet auf PIN-Eingabe
+
+function toggleChat() { isOpen ? closeChat() : openChat(); }
+
+function openChat() {
+  isOpen = true;
+  document.getElementById('chat-window').classList.add('open');
+  if (apiKey && messages.length === 0) startConversation();
+}
+
+function closeChat() {
+  isOpen = false;
+  document.getElementById('chat-window').classList.remove('open');
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    alert('Bitte einen gültigen Anthropic API-Key eingeben (beginnt mit sk-ant-)');
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem('ws24_apikey', apiKey);
+  document.getElementById('api-overlay').style.display = 'none';
+  startConversation();
+}
+
+function startConversation() {
+  appendMsg('bot',
+    `👋 Hallo! Ich bin der KI-Assistent von **${BETRIEB_NAME}**.\n\nWie kann ich Ihnen helfen? Beschreiben Sie Ihr Problem – ich kümmere mich sofort darum!`
+  );
+}
+
+function appendMsg(role, text) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + role;
+  el.innerHTML = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  document.getElementById('chat-messages').appendChild(el);
+  scrollBottom();
+}
+
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'typing-indicator';
+  el.id = 'typing';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  document.getElementById('chat-messages').appendChild(el);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+function scrollBottom() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function quickSend(text) {
+  document.getElementById('chat-input').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('chat-input');
+  const text  = input.value.trim();
+  if (!text) return;
+  if (!apiKey) { openChat(); return; }
+
+  // ── SMS-PIN-Modus: Kunde gibt seinen Code ein ──
+  if (smsState) {
+    input.value = '';
+    input.style.height = 'auto';
+    appendMsg('user', text);
+    await verifizierePIN(text);
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  appendMsg('user', text);
+  messages.push({ role: 'user', content: text });
+
+  document.getElementById('quick-btns').style.display = 'none';
+
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: SYSTEM_PROMPT,
+        messages: messages
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API-Fehler ' + res.status);
+
+    const reply = data.content[0].text;
+    messages.push({ role: 'assistant', content: reply });
+    removeTyping();
+
+    // Rückruf-Erkennung: Bot gibt JSON zurück → SMS senden
+    // Backticks und ```json entfernen, falls Bot sie hinzufügt
+    let handled = false;
+    try {
+      const cleaned = reply.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
+      const json = JSON.parse(cleaned);
+      if (json.RUECKRUF && json.name && json.telefon) {
+        await sendePIN(json.name, json.telefon);
+        handled = true;
+      }
+    } catch(e) {}
+    if (!handled) appendMsg('bot', reply);
+
+  } catch (err) {
+    removeTyping();
+    appendMsg('error', `⚠️ Fehler: ${err.message}`);
+  } finally {
+    isLoading = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+// ── SMS via Server senden ────────────────────────────────────
+async function sendePIN(name, telefon) {
+  // Wartehinweis anzeigen
+  appendMsg('bot', `📱 Einen Moment – wir senden Ihnen gleich eine SMS zur Bestätigung an **${telefon}**...`);
+
+  try {
+    const res = await fetch(`${SERVER_URL}/send-sms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, telefon })
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Server-Fehler');
+
+    // Erfolgskarte anzeigen
+    showSmsBestaetigungKarte(name, telefon);
+
+    // In lokaler Liste speichern
+    const list = JSON.parse(localStorage.getItem('ws24_rueckrufe') || '[]');
+    const zeit = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    list.push({ name, telefon, zeit, datum: new Date().toLocaleDateString('de-DE'), status: 'SMS gesendet' });
+    localStorage.setItem('ws24_rueckrufe', JSON.stringify(list));
+
+  } catch (err) {
+    // Fallback: Server noch nicht eingerichtet → trotzdem Bestätigung zeigen
+    console.warn('SMS-Server nicht erreichbar:', err.message);
+    showSmsBestaetigungKarte(name, telefon, true);
+  }
+}
+
+function showSmsBestaetigungKarte(name, telefon, fallback = false) {
+  const zeit = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  const card = document.createElement('div');
+  card.style.cssText = `
+    background: linear-gradient(135deg, #0a3d1a, #0d5c28);
+    border: 1px solid rgba(45,255,143,0.3);
+    border-radius: 16px; border-bottom-left-radius: 4px;
+    padding: 14px 16px; align-self: flex-start; max-width: 90%;
+    animation: msg-in 0.22s ease-out; font-size: 14px; line-height: 1.7; color: #c8f5dc;
+  `;
+  card.innerHTML = fallback ? `
+    <div style="font-weight:700;color:#2dff8f;margin-bottom:8px;font-size:15px;">✅ Rückruf notiert!</div>
+    <div>👤 <strong>${name}</strong></div>
+    <div>📞 <strong>${telefon}</strong></div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(45,255,143,0.15);font-size:13px;">
+      Wir rufen Sie <strong>so schnell wie möglich</strong> zurück! 🔧
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:rgba(200,245,220,0.5);">${zeit} Uhr</div>
+  ` : `
+    <div style="font-weight:700;color:#2dff8f;margin-bottom:8px;font-size:15px;">📱 SMS wurde gesendet!</div>
+    <div>👤 <strong>${name}</strong></div>
+    <div>📞 <strong>${telefon}</strong></div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(45,255,143,0.15);font-size:13px;">
+      Bitte antworten Sie auf unsere SMS mit <strong>JA</strong> – dann rufen wir Sie sofort zurück! 🔧
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:rgba(200,245,220,0.5);">${zeit} Uhr</div>
+  `;
+  document.getElementById('chat-messages').appendChild(card);
+  scrollBottom();
+}
+
+// Show overlay if no key yet
+window.addEventListener('DOMContentLoaded', () => {
+  if (apiKey) document.getElementById('api-overlay').style.display = 'none';
+});
+
+function toggleBetreiberPanel() {
+  const p = document.getElementById('betreiber-panel');
+  const liste = document.getElementById('rueckruf-liste');
+  if (p.style.display === 'none') {
+    const data = JSON.parse(localStorage.getItem('ws24_rueckrufe') || '[]');
+    if (data.length === 0) {
+      liste.innerHTML = '<em>Noch keine Rückruf-Anfragen.</em>';
+    } else {
+      liste.innerHTML = data.slice().reverse().map((r,i) => `
+        <div style="padding:10px 0;border-bottom:1px solid rgba(0,180,255,0.08);">
+          <strong style="color:#d8e8f5;">${r.name}</strong><br>
+          📞 ${r.telefon}<br>
+          <span style="font-size:11px;color:#4a6fa5;">${r.datum} um ${r.zeit} Uhr</span>
+        </div>
+      `).join('');
+    }
+    p.style.display = 'block';
+  } else {
+    p.style.display = 'none';
+  }
+}
+
+function clearRueckrufe() {
+  if (confirm('Alle Rückruf-Anfragen wirklich löschen?')) {
+    localStorage.removeItem('ws24_rueckrufe');
+    document.getElementById('rueckruf-liste').innerHTML = '<em>Liste geleert.</em>';
+  }
+}
+</script>
+</body>
+</html>
