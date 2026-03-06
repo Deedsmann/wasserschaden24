@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -684,7 +683,7 @@ footer a:hover{color:#fff;}
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ── CONFIG ────────────────────────────────────────────
 const BETRIEB_NAME    = "Wasserschaden24.online";
 const KONTAKT_TEL     = "+491606076427";
@@ -817,4 +816,11 @@ function formSubmit(){
   localStorage.setItem('ws24_rueckrufe',JSON.stringify(list));
   document.getElementById('form-success').style.display='block';
   document.getElementById('f-name').value='';
-  docum
+  document.getElementById('f-tel').value='';
+  document.getElementById('f-msg').value='';
+}
+
+window.addEventListener('DOMContentLoaded',()=>{ /* Server-Modus aktiv */ });
+</script>
+</body>
+</html>
