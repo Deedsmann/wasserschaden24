@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -610,7 +611,7 @@ footer a:hover{color:#fff;}
         <div class="info-icon">📧</div>
         <div>
           <strong>E-Mail</strong>
-          <span><a href="mailto:info@pixel-ads.de">info@pixel-ads.de</a></span>
+          <span><a href="/cdn-cgi/l/email-protection#bfd6d1d9d0ffcfd6c7dad392dedbcc91dbda"><span class="__cf_email__" data-cfemail="dab3b4bcb59aaab3a2bfb6f7bbbea9f4bebf">[email&#160;protected]</span></a></span>
         </div>
       </div>
       <div class="info-item">
@@ -649,16 +650,7 @@ footer a:hover{color:#fff;}
 </button>
 
 <div id="chat-window">
-  <div id="api-overlay">
-    <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#00b4ff" stroke-width="1.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
-    </svg>
-    <h3>API-Key eingeben</h3>
-    <p>Einmalig deinen Anthropic API-Key eintragen.<br>Er wird nur in deinem Browser gespeichert.</p>
-    <input id="api-key-input" type="password" placeholder="sk-ant-api03-...">
-    <button id="save-key-btn" onclick="saveApiKey()">Speichern & Starten</button>
-    <p class="key-note">Noch kein Key? → console.anthropic.com</p>
-  </div>
+  <!-- kein API-Key Overlay mehr nötig – Key ist sicher am Server -->
   <div class="chat-header">
     <div class="chat-header-avatar">
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2">
@@ -692,14 +684,14 @@ footer a:hover{color:#fff;}
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIG ────────────────────────────────────────────
 const BETRIEB_NAME    = "Wasserschaden24.online";
 const KONTAKT_TEL     = "+491606076427";
 const KONTAKT_EMAIL   = "info@pixel-ads.de";
 const OEFFNUNGSZEITEN = "24 Stunden täglich, 7 Tage die Woche";
 const STADT           = "Gießen und Umkreis bis 25 km";
-const SERVER_URL = "https://wasserschaden24-production.up.railway.app";
+const SERVER_URL      = "https://wasserschaden24-production.up.railway.app";
 
 const SYSTEM_PROMPT = `Du bist der freundliche KI-Assistent von ${BETRIEB_NAME}, einem professionellen Klempner- und Sanitär-Notdienst.
 Telefon: ${KONTAKT_TEL} | E-Mail: ${KONTAKT_EMAIL} | Einsatzgebiet: ${STADT} | Verfügbarkeit: ${OEFFNUNGSZEITEN}
@@ -715,25 +707,16 @@ Sobald du beides hast, antworte NUR mit diesem JSON (kein Text davor/danach):
 VERHALTEN: Kurz & freundlich auf Deutsch. Max. 3-4 Sätze. Nie selbst Telefonnummer nennen – immer Rückruf anbieten.`;
 
 let messages = [], isOpen = false, isLoading = false;
-let apiKey = localStorage.getItem('ws24_apikey') || '';
 
 function toggleChat(){ isOpen ? closeChat() : openChat(); }
 function openChat(){
   isOpen = true;
   document.getElementById('chat-window').classList.add('open');
-  if(apiKey && messages.length === 0) startConversation();
+  if(messages.length === 0) startConversation();
 }
 function closeChat(){
   isOpen = false;
   document.getElementById('chat-window').classList.remove('open');
-}
-function saveApiKey(){
-  const val = document.getElementById('api-key-input').value.trim();
-  if(!val.startsWith('sk-ant-')){ alert('Bitte gültigen Anthropic API-Key eingeben (beginnt mit sk-ant-)'); return; }
-  apiKey = val;
-  localStorage.setItem('ws24_apikey', apiKey);
-  document.getElementById('api-overlay').style.display = 'none';
-  startConversation();
 }
 function startConversation(){
   appendMsg('bot', `👋 Hallo! Ich bin der KI-Assistent von **${BETRIEB_NAME}**.\n\nWie kann ich Ihnen helfen? Beschreiben Sie Ihr Problem – ich kümmere mich sofort darum!`);
@@ -762,7 +745,7 @@ async function sendMessage(){
   if(isLoading) return;
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if(!text || !apiKey) return;
+  if(!text) return;
   input.value=''; input.style.height='auto';
   appendMsg('user', text);
   messages.push({role:'user',content:text});
@@ -770,13 +753,14 @@ async function sendMessage(){
   isLoading=true; document.getElementById('send-btn').disabled=true;
   showTyping();
   try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    // Anfrage geht an deinen sicheren Server – kein API-Key im Browser!
+    const res = await fetch(`${SERVER_URL}/chat`, {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:SYSTEM_PROMPT,messages})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ system: SYSTEM_PROMPT, messages })
     });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error?.message||'API-Fehler '+res.status);
+    if(!res.ok) throw new Error(data.error||'Server-Fehler '+res.status);
     const reply = data.content[0].text;
     messages.push({role:'assistant',content:reply});
     removeTyping();
@@ -789,7 +773,7 @@ async function sendMessage(){
     if(!handled) appendMsg('bot',reply);
   }catch(err){
     removeTyping();
-    appendMsg('error',`⚠️ Fehler: ${err.message}`);
+    appendMsg('error',`⚠️ ${err.message}`);
   }finally{
     isLoading=false; document.getElementById('send-btn').disabled=false;
   }
@@ -833,13 +817,4 @@ function formSubmit(){
   localStorage.setItem('ws24_rueckrufe',JSON.stringify(list));
   document.getElementById('form-success').style.display='block';
   document.getElementById('f-name').value='';
-  document.getElementById('f-tel').value='';
-  document.getElementById('f-msg').value='';
-}
-
-window.addEventListener('DOMContentLoaded',()=>{
-  if(apiKey) document.getElementById('api-overlay').style.display='none';
-});
-</script>
-</body>
-</html>
+  docum
